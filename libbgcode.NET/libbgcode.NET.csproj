@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>libbgcode.NET</PackageId>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <Authors>Henrik O. Sørensen</Authors>
+    <Description>A .NET reader for Prusa's binary G-code (bgcode) container format: file header, block enumeration, per-block decompression (deflate, heatshrink), MeatPack G-code decoding and CRC-32 verification. Implemented from the published format specification; hardened against untrusted input.</Description>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/henrikottesorensen/libbgcode.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/henrikottesorensen/libbgcode.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>bgcode;binary-gcode;gcode;prusa;3d-printing;meatpack;heatshrink</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" />
+    <None Include="../LICENSE.meatpack" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Packs as an ordinary package dependency on MeatPack.NET at the same version. -->
+    <ProjectReference Include="..\MeatPack.NET\MeatPack.NET.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HeatshrinkDotNet" Version="1.0.0" />
+    <PackageReference Include="System.IO.Hashing" Version="10.0.0" />
+    <PackageReference Include="MinVer" Version="7.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
