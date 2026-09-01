@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\libbgcode.NET\libbgcode.NET.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\libbgcode.NET.UnitTest\metadata-coreone-hf04-pla.bgcode" Link="metadata-coreone-hf04-pla.bgcode" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
