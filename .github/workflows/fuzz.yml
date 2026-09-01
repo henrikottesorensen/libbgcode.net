@@ -1,0 +1,50 @@
+name: Fuzz
+
+on:
+  schedule:
+    - cron: '41 3 * * 1' # Mondays 03:41 UTC
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: Seconds to fuzz per harness
+        default: '600'
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        harness: [reader, meatpack]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install clang with libFuzzer runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libclang-rt-dev || sudo apt-get install -y clang libclang-rt-18-dev
+
+      # The corpus evolves across scheduled runs: restore the latest one,
+      # save this run's under a fresh key.
+      - name: Restore corpus
+        uses: actions/cache@v6
+        with:
+          path: libbgcode.NET.Fuzz/corpus
+          key: fuzz-corpus-${{ matrix.harness }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.harness }}-
+
+      - name: Fuzz
+        run: libbgcode.NET.Fuzz/fuzz.sh ${{ matrix.harness }} ${{ inputs.duration || '600' }}
+
+      - name: Upload findings
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-findings-${{ matrix.harness }}
+          path: |
+            libbgcode.NET.Fuzz/crash-*
+            libbgcode.NET.Fuzz/corpus

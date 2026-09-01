@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="MeatPack.NET.Test/MeatPack.NET.Test.csproj" />
+  <Project Path="MeatPack.NET/MeatPack.NET.csproj" />
+  <Project Path="libbgcode.NET.Fuzz/libbgcode.NET.Fuzz.csproj" />
+  <Project Path="libbgcode.NET.InteropTest/libbgcode.NET.InteropTest.csproj" />
+  <Project Path="libbgcode.NET.UnitTest/libbgcode.NET.UnitTest.csproj" />
+  <Project Path="libbgcode.NET/libbgcode.NET.csproj" />
+</Solution>

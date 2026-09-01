@@ -1,0 +1,47 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Must match the environment on the nuget.org trusted publishing policy.
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      # MinVer needs the full history and tags to compute the version.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install pybgcode
+        run: pip install pybgcode || echo "::warning::pybgcode not installable; interop tests will skip"
+
+      - name: Test
+        run: dotnet test -c Release
+
+      # MinVer derives the package version from the release tag (v1.2.3
+      # -> 1.2.3), so the tag and the published version cannot drift.
+      - name: Pack
+        run: |
+          dotnet pack MeatPack.NET/MeatPack.NET.csproj -c Release -o artifacts
+          dotnet pack libbgcode.NET/libbgcode.NET.csproj -c Release -o artifacts
+
+      # Trusted publishing: exchange the workflow's OIDC token for a
+      # short-lived nuget.org API key — no stored secret.
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: henrikottesorensen
+
+      - name: Push to nuget.org
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

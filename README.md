@@ -1,0 +1,94 @@
+# libbgcode.NET
+
+[![CI](https://github.com/henrikottesorensen/libbgcode.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/henrikottesorensen/libbgcode.NET/actions/workflows/ci.yml)
+
+A .NET reader for Prusa's **binary G-code** (`bgcode`) container format: the file header, lazy
+block enumeration, per-block decompression (deflate, heatshrink), MeatPack G-code decoding, and
+opt-in CRC-32 verification.
+
+Implemented from the format's [published specification](https://github.com/prusa3d/libbgcode/blob/main/doc/specifications.md).
+The facts the specification does not state — that deflate payloads are zlib-wrapped, that the
+CRC-32 covers each block from its header through its data, and the reconstruction rules MeatPack's
+lossy packing demands of a decoder — are established from real PrusaSlicer output and pinned by
+interop tests against [pybgcode](https://pypi.org/project/pybgcode/), Prusa's own binding of the
+reference implementation.
+
+The library targets `net10.0` and depends on
+[HeatshrinkDotNet](https://github.com/henrikottesorensen/HeatshrinkDotNet) for the heatshrink
+blocks.
+
+## Untrusted input
+
+The reader is written for files anybody may have uploaded. Every size on the wire is treated as
+attacker-influenced: nothing is allocated from a declared size without a caller-configurable
+bound, a payload must decompress to exactly its declared size, and the block walk refuses a file
+whose offsets cannot be trusted. A malformed file yields `null` from whichever call discovered it,
+never an exception — a contract held in place by a seeded mutation test and a coverage-guided
+fuzzing harness (`libbgcode.NET.Fuzz`).
+
+## Usage
+
+```csharp
+using libbgcode.NET;
+
+using FileStream file = File.OpenRead("model.bgcode");
+
+BgcodeReader? reader = BgcodeReader.Open(file);
+
+if (reader is null)
+{
+    // Not a readable binary G-code file. Note that the name decides nothing:
+    // PrusaSlicer routinely writes binary G-code to files called .gcode, so
+    // dispatch on BgcodeReader.Magic, never on the extension.
+    return;
+}
+
+while (reader.NextBlock() is { } block)
+{
+    switch (block.Type)
+    {
+        case BgcodeBlockType.PrinterMetadata:
+            // "printer_model=COREONE\nnozzle_diameter=0.4\n..." - INI, one pair per line.
+            string? ini = reader.ReadText(block);
+            break;
+
+        case BgcodeBlockType.Thumbnail:
+            // block.Thumbnail carries format and pixel size; ReadData returns the image bytes.
+            byte[]? image = reader.ReadData(block);
+            break;
+
+        case BgcodeBlockType.GCode:
+            // Decompressed and MeatPack-decoded to plain G-code text.
+            string? gcode = reader.ReadText(block);
+            break;
+    }
+}
+```
+
+Blocks are descriptors: `NextBlock()` reads headers only and seeks past payloads, so walking to
+the one block you want costs a few small reads regardless of file size. The specification orders
+blocks (file metadata, printer metadata, thumbnails, print metadata, slicer metadata, G-code), so
+a reader after early metadata can stop at the first later type.
+
+`BgcodeReaderOptions` bounds what a payload may cost (`MaxDataBytes`, default 64 MiB) and turns on
+per-block CRC-32 verification (`VerifyChecksum`, off by default).
+
+The MeatPack decoder lives in its own package, [MeatPack.NET](MeatPack.NET/README.md), developed
+in this repository — `MeatPackDecoder.Unpack` decodes payloads obtained anywhere, serial hosts
+included; `libbgcode.NET` depends on it for the G-code blocks.
+
+## What this is not
+
+A reader only, today. It does not write bgcode files, and it does not parse the G-code itself —
+it hands you the text.
+
+## Licenses
+
+- **libbgcode.NET** is licensed under the [LGPL-3.0-only](LICENSE).
+- The MeatPack scheme is [Scott Mudge's](https://github.com/scottmudge/OctoPrint-MeatPack)
+  (BSD-3-Clause, [LICENSE.meatpack](LICENSE.meatpack)); the decoder here is an independent
+  implementation of the documented scheme, including the reconstruction behaviour the bgcode
+  variant expects.
+- The binary G-code format and its specification are [Prusa's](https://github.com/prusa3d/libbgcode);
+  this library is an independent implementation of that published format and shares no code with
+  `libbgcode`.

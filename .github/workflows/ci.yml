@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history for MinVer
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # The interop tests cross-check against pybgcode, Prusa's binding of the
+      # reference implementation, and skip themselves when it is absent. Wheels
+      # exist for Linux; the other runners run without the oracle.
+      - name: Install pybgcode
+        if: runner.os == 'Linux'
+        run: pip install pybgcode || echo "::warning::pybgcode not installable; interop tests will skip"
+
+      - name: Test
+        if: runner.os != 'Linux'
+        run: dotnet test -c Release
+
+      # Coverage on the one runner whose profiler supports it; macOS arm64 does not
+      # initialise the collector, and one report is enough.
+      - name: Test with coverage
+        if: runner.os == 'Linux'
+        run: |
+          dotnet tool install --global dotnet-coverage
+          dotnet-coverage collect -f cobertura -o coverage.cobertura.xml "dotnet test -c Release"
+
+      - name: Upload coverage
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage.cobertura.xml
+
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history for MinVer
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pack
+        run: |
+          dotnet pack MeatPack.NET/MeatPack.NET.csproj -c Release -o artifacts
+          dotnet pack libbgcode.NET/libbgcode.NET.csproj -c Release -o artifacts
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nuget-package
+          path: artifacts/*.nupkg
