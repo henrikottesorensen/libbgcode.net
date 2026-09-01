@@ -1,0 +1,5 @@
+# No end-of-line conversion for anything, anywhere. The tree is authored LF and
+# .editorconfig enforces it; the byte-exact G-code fixtures must survive a
+# checkout on a runner whose machine config sets core.autocrlf=true, which is
+# what GitHub's Windows images do.
+* -text

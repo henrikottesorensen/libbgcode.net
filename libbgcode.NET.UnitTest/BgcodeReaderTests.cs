@@ -133,6 +133,12 @@ public class BgcodeReaderTests
     /// The G-code block - heatshrink 12/4 wrapping MeatPack - decodes to the expected text,
     /// checked byte for byte against a fixture cross-checked against Prusa's own pybgcode.
     /// </summary>
+    /// <remarks>
+    /// The comparison is bytes, not strings, and the fixture is read as bytes: a byte-exact
+    /// expectation must not pass through anything entitled to normalise line endings. The first
+    /// CI run on Windows proved the point - the runner's machine-wide <c>autocrlf</c> rewrote
+    /// the fixture at checkout, which <c>.gitattributes</c> now forbids.
+    /// </remarks>
     [Fact]
     public void DecodesTheGCodeBlockOfARealFile()
     {
@@ -144,7 +150,7 @@ public class BgcodeReaderTests
         string? text = reader.ReadText(block);
 
         text.Should().NotBeNull();
-        text.Should().Be(File.ReadAllText(FixturePath("gcode-block-coreone-hf04-pla.txt")));
+        Encoding.UTF8.GetBytes(text!).Should().Equal(File.ReadAllBytes(FixturePath("gcode-block-coreone-hf04-pla.txt")));
     }
 
     /// <summary>Verification on: every block of a genuine file passes its stored CRC-32.</summary>
