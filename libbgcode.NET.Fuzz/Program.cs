@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
 using System.IO.Hashing;
+using System.Text;
 
 using MeatPack.NET;
 
@@ -111,8 +112,10 @@ public static class Program
     }
 
     /// <summary>
-    /// The MeatPack decoder against arbitrary bytes: never throws, and the output stays within
-    /// the structural bound of two characters per input byte plus one re-inserted space each.
+    /// The MeatPack codec against arbitrary bytes: the decoder never throws and its output stays
+    /// within the structural bound of two characters per input byte plus one re-inserted space
+    /// each; the same bytes read as text then encode and decode again without an escape, whatever
+    /// they contain.
     /// </summary>
     private static void MeatPackHarness(ReadOnlySpan<byte> data)
     {
@@ -122,6 +125,16 @@ public static class Program
         {
             throw new InvalidOperationException("the decoder produced implausibly much output");
         }
+
+        string asText = Encoding.UTF8.GetString(data);
+        byte[] packed = MeatPackEncoder.Pack(asText, keepComments: (data.Length & 1) == 0, omitSpaces: (data.Length & 2) == 0);
+
+        if (packed.Length > (4L * Encoding.UTF8.GetByteCount(asText)) + 16)
+        {
+            throw new InvalidOperationException("the encoder produced implausibly much output");
+        }
+
+        MeatPackDecoder.Unpack(packed);
     }
 
     private static int Replay(string harness, string path)

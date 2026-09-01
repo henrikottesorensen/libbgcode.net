@@ -1,6 +1,6 @@
 # MeatPack.NET
 
-A .NET decoder for **MeatPack**, [Scott Mudge's](https://github.com/scottmudge/OctoPrint-MeatPack)
+A .NET encoder and decoder for **MeatPack**, [Scott Mudge's](https://github.com/scottmudge/OctoPrint-MeatPack)
 G-code packing scheme (BSD-3-Clause; see `LICENSE.meatpack`), used by Marlin hosts over serial and
 by Prusa's binary G-code container for its G-code blocks.
 
@@ -27,6 +27,11 @@ the input.
 using MeatPack.NET;
 
 byte[] gcodeText = MeatPackDecoder.Unpack(packedBytes);
+
+// And the other direction - the reference packer's line treatment exactly:
+// comments kept or dropped, inline comments cut, G-lines space-stripped with
+// serial checksums recomputed, the no-spaces table variant on by default.
+byte[] packed = MeatPackEncoder.Pack("G1 X10 Y20\nM104 S210\n", keepComments: true);
 ```
 
 ## License

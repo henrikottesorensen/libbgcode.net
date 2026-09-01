@@ -74,9 +74,9 @@ a reader after early metadata can stop at the first later type.
 `BgcodeReaderOptions` bounds what a payload may cost (`MaxDataBytes`, default 64 MiB) and turns on
 per-block CRC-32 verification (`VerifyChecksum`, off by default).
 
-The MeatPack decoder lives in its own package, [MeatPack.NET](MeatPack.NET/README.md), developed
-in this repository — `MeatPackDecoder.Unpack` decodes payloads obtained anywhere, serial hosts
-included; `libbgcode.NET` depends on it for the G-code blocks.
+MeatPack lives in its own package, [MeatPack.NET](MeatPack.NET/README.md), developed in this
+repository — `MeatPackDecoder.Unpack` and `MeatPackEncoder.Pack` work on payloads from anywhere,
+serial hosts included; `libbgcode.NET` depends on it for the G-code blocks.
 
 ## What this is not
 

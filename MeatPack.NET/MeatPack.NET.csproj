@@ -4,7 +4,7 @@
     <PackageId>MeatPack.NET</PackageId>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <Authors>Henrik O. Sørensen</Authors>
-    <Description>A .NET decoder for MeatPack, the G-code packing scheme used by Marlin hosts and by Prusa's binary G-code: the 4-bit character table, full-width escapes, command words, and the reconstruction the lossy packing demands (G-line re-spacing, padding and newline handling). Hardened against untrusted input.</Description>
+    <Description>A .NET encoder and decoder for MeatPack, the G-code packing scheme used by Marlin hosts and by Prusa's binary G-code: the 4-bit character table, full-width escapes, command words, both comment policies, the no-spaces variant, and the reconstruction the lossy packing demands. Hardened against untrusted input.</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/henrikottesorensen/libbgcode.NET</PackageProjectUrl>
