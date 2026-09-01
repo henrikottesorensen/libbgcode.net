@@ -333,3 +333,8 @@ ASALocalRun/
 libbgcode.NET.Fuzz/.tools/
 libbgcode.NET.Fuzz/corpus/
 libbgcode.NET.Fuzz/crash-*
+.DS_Store
+private
+
+# Local test data (real sliced files, firmware bundles); never committed.
+private/
