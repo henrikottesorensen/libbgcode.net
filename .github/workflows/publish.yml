@@ -22,10 +22,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # Not on PyPI; built from Prusa's repository, pinned, and required - a
+      # release must not ship on a run whose interop suite quietly skipped.
       - name: Install pybgcode
-        run: pip install pybgcode || echo "::warning::pybgcode not installable; interop tests will skip"
+        run: pip install "git+https://github.com/prusa3d/libbgcode.git@d4da9073616d70a43c151e8c1d7fbff879d2e08a"
 
       - name: Test
+        env:
+          LIBBGCODE_REQUIRE_ORACLE: '1'
         run: dotnet test -c Release
 
       # MinVer derives the package version from the release tag (v1.2.3

@@ -23,11 +23,14 @@ jobs:
           dotnet-version: 10.0.x
 
       # The interop tests cross-check against pybgcode, Prusa's binding of the
-      # reference implementation, and skip themselves when it is absent. Wheels
-      # exist for Linux; the other runners run without the oracle.
+      # reference implementation. It is not on PyPI, so it is built from their
+      # repository (pinned) - on Linux only, and required there: a failed
+      # install fails the job, and LIBBGCODE_REQUIRE_ORACLE below turns a
+      # skipped interop suite into a failure rather than a quiet retirement.
+      # The other runners run without the oracle, where skipping is by design.
       - name: Install pybgcode
         if: runner.os == 'Linux'
-        run: pip install pybgcode || echo "::warning::pybgcode not installable; interop tests will skip"
+        run: pip install "git+https://github.com/prusa3d/libbgcode.git@d4da9073616d70a43c151e8c1d7fbff879d2e08a"
 
       - name: Test
         if: runner.os != 'Linux'
@@ -37,6 +40,8 @@ jobs:
       # initialise the collector, and one report is enough.
       - name: Test with coverage
         if: runner.os == 'Linux'
+        env:
+          LIBBGCODE_REQUIRE_ORACLE: '1'
         run: |
           dotnet tool install --global dotnet-coverage
           dotnet-coverage collect -f cobertura -o coverage.cobertura.xml "dotnet test -c Release"

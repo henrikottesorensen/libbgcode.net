@@ -7,6 +7,16 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- Wherever pybgcode is absent every interop test skips, and
+       Microsoft.Testing.Platform treats zero executed tests as exit code 8;
+       that is the designed shape of a machine without the oracle, not an error.
+       The guard against this quietly retiring the suite is on the other side:
+       CI runners that promise the oracle set LIBBGCODE_REQUIRE_ORACLE, which
+       turns the skip into a failure. -->
+  <PropertyGroup>
+    <TestingPlatformCommandLineArguments>--ignore-exit-code 8</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" Version="9.3.0" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />

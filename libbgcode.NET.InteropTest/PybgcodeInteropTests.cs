@@ -344,9 +344,20 @@ public class PybgcodeInteropTests
 
     private static string RequirePython()
     {
-        Assert.SkipWhen(Python.Value is null, "No Python with pybgcode importable; set LIBBGCODE_PYTHON to run the interop tests.");
+        if (Python.Value is null)
+        {
+            // A runner that promises the oracle must fail loudly when it is missing - a skip
+            // there would quietly retire the whole interop suite. Everywhere else, skipping is
+            // the designed shape of a machine without pybgcode.
+            if (Environment.GetEnvironmentVariable("LIBBGCODE_REQUIRE_ORACLE") is not null)
+            {
+                Assert.Fail("LIBBGCODE_REQUIRE_ORACLE is set, but no Python can import pybgcode.");
+            }
 
-        return Python.Value!;
+            Assert.Skip("No Python with pybgcode importable; set LIBBGCODE_PYTHON to run the interop tests.");
+        }
+
+        return Python.Value;
     }
 
     private static string? FindPython()
