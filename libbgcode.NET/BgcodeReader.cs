@@ -325,7 +325,9 @@ public sealed class BgcodeReader
     /// thumbnail, an encoding this does not know, or a payload <see cref="ReadData"/> refuses.
     /// </summary>
     /// <remarks>
-    /// For the four metadata block types this is the INI text as stored. For a G-code block it is
+    /// For the four metadata block types this is the INI or JSON text as stored - which of the
+    /// two is <see cref="BgcodeBlock.MetadataEncoding"/>'s answer, and matters for slicer
+    /// metadata, which PrusaSlicer 3 writes as two blocks, one of each. For a G-code block it is
     /// the G-code, MeatPack-decoded when the block says so - which reconstructs what the packing
     /// discarded, so the text is equivalent G-code rather than the slicer's original bytes.
     /// </remarks>
@@ -334,7 +336,7 @@ public sealed class BgcodeReader
     {
         ArgumentNullException.ThrowIfNull(block);
 
-        if (block.MetadataEncoding == BgcodeMetadataEncoding.Ini)
+        if (block.MetadataEncoding is BgcodeMetadataEncoding.Ini or BgcodeMetadataEncoding.Json)
         {
             byte[]? data = ReadData(block);
 

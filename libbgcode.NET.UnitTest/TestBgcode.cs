@@ -43,18 +43,20 @@ internal static class TestBgcode
 
     /// <summary>
     /// A whole file holding one printer metadata block with the given stored payload and declared
-    /// sizes, INI-encoded parameters, and - when the checksum type says so - a correct CRC-32.
+    /// sizes, the given encoding parameter (INI unless said otherwise), and - when the checksum
+    /// type says so - a correct CRC-32.
     /// </summary>
     public static byte[] MetadataBlockFile(ushort compression,
                                            byte[] storedPayload,
                                            uint declaredUncompressedSize,
-                                           ushort checksumType = 0)
+                                           ushort checksumType = 0,
+                                           ushort encoding = 0)
     {
         byte[] blockHeader = BlockHeader(type: 3,
                                          compression,
                                          declaredUncompressedSize,
                                          compression == 0 ? null : (uint)storedPayload.Length);
-        byte[] block = [.. blockHeader, 0x00, 0x00, .. storedPayload];
+        byte[] block = [.. blockHeader, (byte)(encoding & 0xFF), (byte)(encoding >> 8), .. storedPayload];
 
         if (checksumType == 1)
         {

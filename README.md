@@ -8,10 +8,11 @@ opt-in CRC-32 verification.
 
 Implemented from the format's [published specification](https://github.com/prusa3d/libbgcode/blob/main/doc/specifications.md).
 The facts the specification does not state — that deflate payloads are zlib-wrapped, that the
-CRC-32 covers each block from its header through its data, and the reconstruction rules MeatPack's
-lossy packing demands of a decoder — are established from real PrusaSlicer output and pinned by
-interop tests against [pybgcode](https://pypi.org/project/pybgcode/), Prusa's own binding of the
-reference implementation.
+CRC-32 covers each block from its header through its data, the reconstruction rules MeatPack's
+lossy packing demands of a decoder, and the JSON metadata encoding PrusaSlicer 3 adds (it writes
+its slicer metadata twice, a legacy INI block and a JSON block) — are established from real
+PrusaSlicer output and pinned by interop tests against pybgcode, Prusa's own binding of the
+reference implementation, at the exact commit PrusaSlicer 3.0.0-alpha11 pins.
 
 The library targets `net10.0` and depends on
 [HeatshrinkDotNet](https://github.com/henrikottesorensen/HeatshrinkDotNet) for the heatshrink

@@ -6,7 +6,9 @@ namespace libbgcode.NET;
 /// <remarks>
 /// The specification also fixes their order in a file: file metadata (optional), printer metadata,
 /// thumbnails (optional), print metadata, slicer metadata, then the G-code blocks. A reader looking
-/// for one early block can therefore stop as soon as a later type appears.
+/// for one early block can therefore stop as soon as a later type appears. Slicer metadata may
+/// appear twice: PrusaSlicer 3 writes a legacy INI block and a JSON block back to back,
+/// distinguished by their encoding parameter.
 /// </remarks>
 public enum BgcodeBlockType
 {

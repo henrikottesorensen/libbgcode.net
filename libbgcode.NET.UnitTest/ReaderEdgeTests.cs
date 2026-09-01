@@ -75,6 +75,41 @@ public class ReaderEdgeTests
     }
 
     /// <summary>
+    /// JSON-encoded metadata reads as text: the encoding PrusaSlicer 3 added for its slicer
+    /// metadata, beyond the published specification's INI.
+    /// </summary>
+    [Fact]
+    public void ReadsJsonEncodedMetadataAsText()
+    {
+        byte[] json = Encoding.UTF8.GetBytes("{\"printer_model\":\"COREONE\"}");
+        byte[] file = TestBgcode.MetadataBlockFile(compression: 0, json, (uint)json.Length, encoding: 1);
+
+        using MemoryStream stream = new(file, writable: false);
+
+        BgcodeReader reader = BgcodeReader.Open(stream)!;
+        BgcodeBlock block = reader.NextBlock()!;
+
+        block.MetadataEncoding.Should().Be(BgcodeMetadataEncoding.Json);
+        reader.ReadText(block).Should().Be("{\"printer_model\":\"COREONE\"}");
+    }
+
+    /// <summary>An encoding this does not know still refuses to pretend it is text.</summary>
+    [Fact]
+    public void RefusesAnUnknownMetadataEncoding()
+    {
+        byte[] payload = Encoding.UTF8.GetBytes("who knows");
+        byte[] file = TestBgcode.MetadataBlockFile(compression: 0, payload, (uint)payload.Length, encoding: 7);
+
+        using MemoryStream stream = new(file, writable: false);
+
+        BgcodeReader reader = BgcodeReader.Open(stream)!;
+        BgcodeBlock block = reader.NextBlock()!;
+
+        reader.ReadText(block).Should().BeNull();
+        reader.ReadData(block).Should().Equal(payload, "the bytes are still readable; only the text claim is refused");
+    }
+
+    /// <summary>
     /// A block overhanging the end of the file by less than its own header's width: the
     /// truncation window a bound computed against the wrong base would wave through. Every other
     /// truncation test overshoots by kilobytes, which several wrong bounds also refuse.

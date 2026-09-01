@@ -342,6 +342,52 @@ public class PybgcodeInteropTests
         ];
     }
 
+    /// <summary>
+    /// The PrusaSlicer 3 shape: an ASCII file carrying a <c>prusaslicer_json_config</c> section
+    /// converts - through the exact libbgcode commit PrusaSlicer 3.0.0-alpha11 pins - into a
+    /// second slicer metadata block, JSON-encoded, alongside the legacy INI one. Both must walk,
+    /// verify and read as text.
+    /// </summary>
+    [Fact]
+    public void ReadsThePrusaSlicer3JsonMetadataBlock()
+    {
+        string python = RequirePython();
+        string ascii = Path.Combine(WorkDirectory(), "ps3-source-plain.gcode");
+        string withJson = Path.Combine(WorkDirectory(), "ps3-source.gcode");
+        string bgcode = Path.Combine(WorkDirectory(), "ps3.bgcode");
+
+        Convert(python, "to_ascii", FixturePath("metadata-coreone-hf04-pla.bgcode"), ascii);
+
+        string section = "; prusaslicer_json_config = begin\n"
+                         + "; {\"ps3_marker\":\"json_metadata\",\"nozzle_diameter\":[0.4]}\n"
+                         + "; prusaslicer_json_config = end\n";
+
+        File.WriteAllText(withJson, File.ReadAllText(ascii) + section);
+        Convert(python, "to_binary", withJson, bgcode);
+
+        using FileStream file = new(bgcode, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        BgcodeReader reader = BgcodeReader.Open(file, new BgcodeReaderOptions { VerifyChecksum = true })!;
+        List<(BgcodeMetadataEncoding? encoding, string? text)> slicerBlocks = [];
+
+        while (reader.NextBlock() is { } block)
+        {
+            reader.ReadData(block).Should().NotBeNull($"block {block.Type} should decompress and verify");
+
+            if (block.Type == BgcodeBlockType.SlicerMetadata)
+            {
+                slicerBlocks.Add((block.MetadataEncoding, reader.ReadText(block)));
+            }
+        }
+
+        reader.AtEnd.Should().BeTrue();
+        slicerBlocks.Should().HaveCount(2, "PrusaSlicer 3 writes the slicer metadata twice, legacy INI then JSON");
+        slicerBlocks[0].encoding.Should().Be(BgcodeMetadataEncoding.Ini);
+        slicerBlocks[1].encoding.Should().Be(BgcodeMetadataEncoding.Json);
+        slicerBlocks[0].text.Should().NotBeNull();
+        slicerBlocks[1].text.Should().Contain("ps3_marker");
+    }
+
     private static string RequirePython()
     {
         if (Python.Value is null)
