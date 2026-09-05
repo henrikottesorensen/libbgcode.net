@@ -664,6 +664,11 @@ dotnet_diagnostic.VSTHRD003.severity = none
 # already carries a SuppressMessage for CA2012 saying exactly that.
 dotnet_diagnostic.VSTHRD110.severity = none
 
+# Every source file opens with the licence, in the SPDX form tools read. IDE0073 reports a file
+# without it, and the build treats that as an error like every other warning.
+file_header_template = SPDX-License-Identifier: MPL-2.0\nCopyright (c) 2026 Henrik O. Sørensen\nThis Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of\nthe MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+dotnet_diagnostic.IDE0073.severity = warning
+
 # Rider's formatter, off for everything that is not C#. Reformatting a project otherwise rewrites
 # Razor pages, appsettings.json, the csproj and the vendored assets under wwwroot - none of which the
 # C# settings above have anything to say about, and all of which arrive as noise in a diff meant to
