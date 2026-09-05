@@ -25,6 +25,7 @@
     <None Include="metadata-coreone-hf04-pla.bgcode" CopyToOutputDirectory="PreserveNewest" />
     <None Include="metadata-coreone-hf04-abrasive.bgcode" CopyToOutputDirectory="PreserveNewest" />
     <None Include="gcode-block-coreone-hf04-pla.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="ascii-coreone-hf04-pla.gcode" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -98,11 +98,21 @@ MeatPack lives in its own package, [MeatPack.NET](MeatPack.NET/README.md), devel
 repository — `MeatPackDecoder.Unpack` and `MeatPackEncoder.Pack` work on payloads from anywhere,
 serial hosts included; `libbgcode.NET` depends on it for the G-code blocks.
 
+### Converting whole files
+
+`BgcodeConverter.ToAscii` and `BgcodeConverter.ToBinary` convert between the container and the
+ASCII G-code PrusaSlicer writes: the producer line, the head of `; key = value` comments a
+printer reads from the first kilobytes, thumbnail sections, print statistics, and the config
+section (plus PrusaSlicer 3's JSON one). Which comment keys the printer and print metadata blocks
+gather was learned by observing the reference implementation's behaviour, not by reading its
+code; both directions are cross-checked against pybgcode.
+
+Two small apps wrap them: `bin2gcode <in.bgcode> [out.gcode]` and
+`gcode2bin <in.gcode> [out.bgcode] [--drop-comments] [--plain] [--no-compression] [--no-checksum]`.
+
 ## What this is not
 
-It does not parse the G-code itself — it hands you the text — and it does not convert whole
-ASCII G-code files to and from the container the way the reference `bgcode` tool does; it reads
-and writes blocks.
+It does not parse the G-code itself — it hands you the text.
 
 ## Licenses
 

@@ -464,6 +464,90 @@ public class PybgcodeInteropTests
         converted.Should().Contain("G1 X199 Y119 E0.");
     }
 
+    /// <summary>
+    /// The converter's ASCII rendering, judged black-box by the reference: our rendering of a real
+    /// file and the reference's own rendering of it, each fed back through pybgcode's binarizer,
+    /// must yield identical metadata blocks - so ours carries everything theirs does, where theirs
+    /// finds it. (The slicer's original blocks are not the oracle: PrusaSlicer's binarizer orders
+    /// the printer keys differently from the reference converter, and only the converter's order
+    /// is observable through pybgcode.)
+    /// </summary>
+    [Fact]
+    public void TheReferenceBinarizesOurAsciiLikeItsOwn()
+    {
+        string python = RequirePython();
+        string original = FixturePath("metadata-coreone-hf04-pla.bgcode");
+        string ours = Path.Combine(WorkDirectory(), "ours-converted.gcode");
+        string theirs = Path.Combine(WorkDirectory(), "theirs-converted.gcode");
+        string oursBack = Path.Combine(WorkDirectory(), "ours-converted-back.bgcode");
+        string theirsBack = Path.Combine(WorkDirectory(), "theirs-converted-back.bgcode");
+
+        using (FileStream binary = new(original, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (StreamWriter writer = new(ours, append: false, new UTF8Encoding(false)))
+        {
+            BgcodeConverter.ToAscii(binary, writer);
+        }
+
+        Convert(python, "to_ascii", original, theirs);
+        Convert(python, "to_binary", ours, oursBack);
+        Convert(python, "to_binary", theirs, theirsBack);
+
+        Dictionary<BgcodeBlockType, string> fromOurs = MetadataOf(oursBack);
+        Dictionary<BgcodeBlockType, string> fromTheirs = MetadataOf(theirsBack);
+
+        fromOurs.Keys.Should().BeEquivalentTo(fromTheirs.Keys);
+
+        foreach ((BgcodeBlockType type, string text) in fromTheirs)
+        {
+            fromOurs[type].Should().Be(text, $"the {type} block binarized from our ASCII should match the one binarized from the reference's");
+        }
+    }
+
+    /// <summary>And the other direction: a container our converter builds from ASCII converts through pybgcode.</summary>
+    [Fact]
+    public void TheReferenceReadsOurConversionOfAscii()
+    {
+        string python = RequirePython();
+        string source = Path.Combine(WorkDirectory(), "source-for-ours.gcode");
+        string ours = Path.Combine(WorkDirectory(), "ours-binarized.bgcode");
+        string theirs = Path.Combine(WorkDirectory(), "ours-binarized.gcode");
+
+        Convert(python, "to_ascii", FixturePath("metadata-coreone-hf04-pla.bgcode"), source);
+
+        using (StreamReader reader = new(source, Encoding.UTF8))
+        using (FileStream binary = new(ours, FileMode.Create, FileAccess.Write))
+        {
+            BgcodeConverter.ToBinary(reader, binary);
+        }
+
+        Convert(python, "to_ascii", ours, theirs);
+
+        string converted = File.ReadAllText(theirs);
+
+        converted.Should().Contain("; printer_model = COREONE");
+        converted.Should().Contain("; estimated first layer printing time (silent mode) = 15s");
+        converted.Should().Contain("M73 P0 R0\n");
+        converted.Should().Contain("; prusaslicer_config = begin");
+    }
+
+    private static Dictionary<BgcodeBlockType, string> MetadataOf(string path)
+    {
+        using FileStream file = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        BgcodeReader reader = BgcodeReader.Open(file, new BgcodeReaderOptions { VerifyChecksum = true })!;
+        Dictionary<BgcodeBlockType, string> texts = [];
+
+        while (reader.NextBlock() is { } block)
+        {
+            if (block.Type is not (BgcodeBlockType.GCode or BgcodeBlockType.Thumbnail) && !texts.ContainsKey(block.Type))
+            {
+                texts[block.Type] = reader.ReadText(block)!;
+            }
+        }
+
+        return texts;
+    }
+
     private static string RequirePython()
     {
         if (Python.Value is null)

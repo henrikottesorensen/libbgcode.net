@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="bin2gcode/bin2gcode.csproj" />
+  <Project Path="gcode2bin/gcode2bin.csproj" />
   <Project Path="MeatPack.NET.Test/MeatPack.NET.Test.csproj" />
   <Project Path="MeatPack.NET/MeatPack.NET.csproj" />
   <Project Path="libbgcode.NET.Fuzz/libbgcode.NET.Fuzz.csproj" />
