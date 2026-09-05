@@ -36,5 +36,5 @@ byte[] packed = MeatPackEncoder.Pack("G1 X10 Y20\nM104 S210\n", keepComments: tr
 
 ## License
 
-LGPL-3.0-only. The MeatPack scheme itself is Scott Mudge's, BSD-3-Clause, carried in
-`LICENSE.meatpack`.
+Mozilla Public License 2.0. The MeatPack scheme itself is Scott Mudge's, BSD-3-Clause,
+carried in `LICENSE.meatpack`.

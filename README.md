@@ -116,7 +116,7 @@ It does not parse the G-code itself — it hands you the text.
 
 ## Licenses
 
-- **libbgcode.NET** is licensed under the [LGPL-3.0-only](LICENSE).
+- **libbgcode.NET** and **MeatPack.NET** are licensed under the [Mozilla Public License 2.0](LICENSE).
 - The MeatPack scheme is [Scott Mudge's](https://github.com/scottmudge/OctoPrint-MeatPack)
   (BSD-3-Clause, [LICENSE.meatpack](LICENSE.meatpack)); the decoder here is an independent
   implementation of the documented scheme, including the reconstruction behaviour the bgcode

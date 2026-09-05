@@ -5,7 +5,7 @@
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <Authors>Henrik O. Sørensen</Authors>
     <Description>A .NET reader and writer for Prusa's binary G-code (bgcode) container format: file header, block enumeration, per-block compression (deflate, heatshrink), MeatPack G-code encoding and decoding, CRC-32 checksums, the JSON metadata PrusaSlicer 3 writes, and whole-file conversion to and from ASCII G-code. Implemented from the published format specification; the reader is hardened against untrusted input, the writer cannot produce a file the reference implementation refuses.</Description>
-    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/henrikottesorensen/libbgcode.NET</PackageProjectUrl>
     <RepositoryUrl>https://github.com/henrikottesorensen/libbgcode.NET</RepositoryUrl>
