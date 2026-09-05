@@ -388,6 +388,82 @@ public class PybgcodeInteropTests
         slicerBlocks[1].text.Should().Contain("ps3_marker");
     }
 
+    /// <summary>
+    /// The writer, judged by the reference implementation: a file we write, with every block
+    /// type and the slicers' default compressions, must convert to ASCII through pybgcode with
+    /// checksum verification on - and the conversion must carry our metadata and G-code.
+    /// </summary>
+    [Fact]
+    public void TheReferenceImplementationReadsWhatWeWrite()
+    {
+        string python = RequirePython();
+        string bgcode = Path.Combine(WorkDirectory(), "ours.bgcode");
+        string ascii = Path.Combine(WorkDirectory(), "ours.gcode");
+
+        using (FileStream file = new(bgcode, FileMode.Create, FileAccess.Write))
+        using (BgcodeWriter writer = new(file))
+        {
+            writer.WriteFileMetadata("Producer=libbgcode.NET interop test\n");
+            writer.WritePrinterMetadata("printer_model=COREONE\nnozzle_diameter=0.4\nfilament_type=PLA\n");
+            writer.WriteThumbnail(new BgcodeThumbnailParameters(BgcodeThumbnailFormat.Png, 1, 1), TinyPng());
+            writer.WritePrintMetadata("estimated printing time (normal mode)=34s\n");
+            writer.WriteSlicerMetadata("layer_height=0.2\n");
+            writer.WriteSlicerMetadata("{\"layer_height\":0.2}", BgcodeMetadataEncoding.Json);
+            writer.WriteGCode("; written by libbgcode.NET\nM73 P0 R0\nG28\nG1 X10.5 Y20 E0.5\nM104 S210\n");
+        }
+
+        Convert(python, "to_ascii", bgcode, ascii);
+
+        string converted = File.ReadAllText(ascii);
+
+        converted.Should().Contain("; printer_model = COREONE");
+        converted.Should().Contain("; nozzle_diameter = 0.4");
+        converted.Should().Contain("; layer_height = 0.2");
+        converted.Should().Contain("thumbnail begin 1x1");
+        converted.Should().Contain("G1 X10.5 Y20 E0.5\n");
+        converted.Should().Contain("M104 S210\n");
+    }
+
+    /// <summary>
+    /// Every compression the writer offers, with and without checksums, produces a file the
+    /// reference implementation verifies and converts - heatshrink at both windows included,
+    /// which a slicer never writes on metadata and so nothing else would prove.
+    /// </summary>
+    [Theory]
+    [InlineData(BgcodeCompression.None, BgcodeChecksumType.Crc32)]
+    [InlineData(BgcodeCompression.Deflate, BgcodeChecksumType.Crc32)]
+    [InlineData(BgcodeCompression.Heatshrink11, BgcodeChecksumType.Crc32)]
+    [InlineData(BgcodeCompression.Heatshrink12, BgcodeChecksumType.Crc32)]
+    [InlineData(BgcodeCompression.Heatshrink12, BgcodeChecksumType.None)]
+    public void TheReferenceImplementationReadsEveryCompressionWeWrite(BgcodeCompression compression, BgcodeChecksumType checksum)
+    {
+        string python = RequirePython();
+        string bgcode = Path.Combine(WorkDirectory(), $"ours-{compression}-{checksum}.bgcode");
+        string ascii = Path.Combine(WorkDirectory(), $"ours-{compression}-{checksum}.gcode");
+        StringBuilder moves = new();
+
+        for (int i = 0; i < 3000; i++)
+        {
+            moves.Append("G1 X").Append(i % 200).Append(" Y").Append(i % 180).Append(" E0.").Append(i % 97).Append('\n');
+        }
+
+        using (FileStream file = new(bgcode, FileMode.Create, FileAccess.Write))
+        using (BgcodeWriter writer = new(file, checksum))
+        {
+            writer.WritePrinterMetadata("printer_model=COREONE\n", compression);
+            writer.WritePrintMetadata("estimated printing time (normal mode)=34s\n", compression);
+            writer.WriteSlicerMetadata("layer_height=0.2\n", BgcodeMetadataEncoding.Ini, compression);
+            writer.WriteGCode(moves.ToString(), BgcodeGCodeEncoding.MeatPackWithComments, compression);
+        }
+
+        Convert(python, "to_ascii", bgcode, ascii);
+
+        string converted = File.ReadAllText(ascii);
+
+        converted.Should().Contain("; printer_model = COREONE");
+        converted.Should().Contain("G1 X199 Y119 E0.");
+    }
+
     private static string RequirePython()
     {
         if (Python.Value is null)

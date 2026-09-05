@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Coverage-guided fuzzing via SharpFuzz + libFuzzer.
 #
-# Usage: ./fuzz.sh [reader|meatpack] [seconds]
-#   harness  "reader" (the whole container path, default) or
-#            "meatpack" (the MeatPack decoder alone)
+# Usage: ./fuzz.sh [reader|meatpack|writer] [seconds]
+#   harness  "reader" (the whole container path, default),
+#            "meatpack" (the MeatPack codec alone) or "writer" (write then read back)
 #   seconds  how long to fuzz; 0 means run until interrupted (default 60)
 #
 # libFuzzer's extra-counters transport (how the .NET coverage reaches the
@@ -19,8 +19,8 @@ HARNESS="${1:-reader}"
 DURATION="${2:-60}"
 
 case "$HARNESS" in
-    reader|meatpack) ;;
-    *) echo "unknown harness: $HARNESS (expected reader or meatpack)" >&2; exit 2 ;;
+    reader|meatpack|writer) ;;
+    *) echo "unknown harness: $HARNESS (expected reader, meatpack or writer)" >&2; exit 2 ;;
 esac
 
 cd "$(dirname "$0")"

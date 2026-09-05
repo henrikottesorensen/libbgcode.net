@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        harness: [reader, meatpack]
+        harness: [reader, meatpack, writer]
     steps:
       - uses: actions/checkout@v7
 

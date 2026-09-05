@@ -5,10 +5,49 @@ using HeatshrinkDotNet;
 namespace libbgcode.NET;
 
 /// <summary>
-/// Decodes one heatshrink-compressed block payload to exactly its declared size.
+/// Heatshrink for one block payload: decodes to exactly the declared size, and encodes as the raw
+/// stream a block stores.
 /// </summary>
 internal static class HeatshrinkBlock
 {
+    /// <summary>The heatshrink stream for <paramref name="payload"/>, with no framing of any kind.</summary>
+    public static byte[] Encode(ReadOnlySpan<byte> payload, int windowBits, int lookaheadBits)
+    {
+        HeatshrinkEncoder encoder = new(windowBits, lookaheadBits);
+        byte[] input = payload.ToArray();
+        byte[] chunk = new byte[4096];
+
+        using System.IO.MemoryStream output = new(input.Length + (input.Length / 8) + 16);
+
+        int sunk = 0;
+        bool finished = false;
+
+        while (!finished)
+        {
+            if (sunk < input.Length)
+            {
+                encoder.Sink(input, sunk, input.Length - sunk, out int count);
+                sunk += count;
+            }
+
+            EncoderPollResult poll;
+
+            do
+            {
+                poll = encoder.Poll(chunk, out int polled);
+                output.Write(chunk, 0, polled);
+            }
+            while (poll == EncoderPollResult.More);
+
+            if (sunk == input.Length)
+            {
+                finished = encoder.Finish() == EncoderFinishResult.Done;
+            }
+        }
+
+        return output.ToArray();
+    }
+
     /// <summary>
     /// The decompressed payload, or null if the stream does not decode to exactly
     /// <paramref name="uncompressedSize"/> bytes: producing fewer is truncation, and producing

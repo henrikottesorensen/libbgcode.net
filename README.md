@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/henrikottesorensen/libbgcode.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/henrikottesorensen/libbgcode.NET/actions/workflows/ci.yml)
 
-A .NET reader for Prusa's **binary G-code** (`bgcode`) container format: the file header, lazy
-block enumeration, per-block decompression (deflate, heatshrink), MeatPack G-code decoding, and
-opt-in CRC-32 verification.
+A .NET reader and writer for Prusa's **binary G-code** (`bgcode`) container format: the file
+header, lazy block enumeration, per-block compression (deflate, heatshrink), MeatPack G-code
+encoding and decoding, and CRC-32 checksums.
 
 Implemented from the format's [published specification](https://github.com/prusa3d/libbgcode/blob/main/doc/specifications.md).
 The facts the specification does not state — that deflate payloads are zlib-wrapped, that the
@@ -74,14 +74,35 @@ a reader after early metadata can stop at the first later type.
 `BgcodeReaderOptions` bounds what a payload may cost (`MaxDataBytes`, default 64 MiB) and turns on
 per-block CRC-32 verification (`VerifyChecksum`, off by default).
 
+### Writing
+
+```csharp
+using FileStream file = File.Create("model.bgcode");
+using BgcodeWriter writer = new(file);          // CRC-32 trailers by default
+
+writer.WritePrinterMetadata("printer_model=COREONE\nnozzle_diameter=0.4\n");
+writer.WriteThumbnail(new BgcodeThumbnailParameters(BgcodeThumbnailFormat.Png, 16, 16), pngBytes);
+writer.WritePrintMetadata("estimated printing time (normal mode)=34s\n");
+writer.WriteSlicerMetadata("layer_height=0.2\n");
+writer.WriteGCode(gcodeText);                   // MeatPack with comments, heatshrink 12/4 - the slicers' defaults
+```
+
+The writer enforces the specification's block order and the reference reader's mandatory chain
+(printer, print and slicer metadata before any G-code), so it cannot produce a file the reference
+implementation refuses; a call out of order throws before it writes. G-code is cut into blocks at
+64 KiB of source on line boundaries, each with fresh MeatPack state, exactly as the reference
+binarizer cuts it. Every compression and encoding the format allows is available per block; the
+defaults are what PrusaSlicer writes.
+
 MeatPack lives in its own package, [MeatPack.NET](MeatPack.NET/README.md), developed in this
 repository — `MeatPackDecoder.Unpack` and `MeatPackEncoder.Pack` work on payloads from anywhere,
 serial hosts included; `libbgcode.NET` depends on it for the G-code blocks.
 
 ## What this is not
 
-A reader only, today. It does not write bgcode files, and it does not parse the G-code itself —
-it hands you the text.
+It does not parse the G-code itself — it hands you the text — and it does not convert whole
+ASCII G-code files to and from the container the way the reference `bgcode` tool does; it reads
+and writes blocks.
 
 ## Licenses
 

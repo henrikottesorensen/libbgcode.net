@@ -15,12 +15,14 @@ namespace libbgcode.NET.Fuzz;
 /// Coverage-guided fuzzing harnesses for SharpFuzz/libFuzzer.
 /// </summary>
 /// <remarks>
-/// Two harnesses, matching the two independent parsers in the library: <c>reader</c> feeds
-/// arbitrary bytes through the whole container path - open, walk, read and verify every block -
-/// and <c>meatpack</c> feeds them to the MeatPack decoder alone. The property both enforce is the
-/// library's contract: whatever the bytes, answer or refuse, never throw - and never spend
-/// unbounded memory doing it, which the reader's own options cap. Run via <c>fuzz.sh</c>; see
-/// that script for the full pipeline.
+/// Three harnesses: <c>reader</c> feeds arbitrary bytes through the whole container path - open,
+/// walk, read and verify every block; <c>meatpack</c> feeds them to the MeatPack codec alone; and
+/// <c>writer</c> treats them as G-code and options, writes a file, and demands the reader take it
+/// back whole. The property the first two enforce is the library's contract: whatever the bytes,
+/// answer or refuse, never throw - and never spend unbounded memory doing it, which the reader's
+/// own options cap. The third enforces the writer's: whatever the text, a verifiable file the
+/// reader decodes to the same blocks. Run via <c>fuzz.sh</c>; see that script for the full
+/// pipeline.
 /// </remarks>
 public static class Program
 {
@@ -43,6 +45,11 @@ public static class Program
 
             case "meatpack":
                 Fuzzer.LibFuzzer.Run(MeatPackHarness);
+
+                return 0;
+
+            case "writer":
+                Fuzzer.LibFuzzer.Run(WriterHarness);
 
                 return 0;
 
@@ -78,7 +85,7 @@ public static class Program
     private static void PrintUsage()
     {
         Console.Error.WriteLine("Usage:");
-        Console.Error.WriteLine("  libbgcode.NET.Fuzz reader|meatpack             (run under libfuzzer-dotnet)");
+        Console.Error.WriteLine("  libbgcode.NET.Fuzz reader|meatpack|writer      (run under libfuzzer-dotnet)");
         Console.Error.WriteLine("  libbgcode.NET.Fuzz seed <corpus-root>          (write seed corpora)");
         Console.Error.WriteLine("  libbgcode.NET.Fuzz replay <harness> <path>     (re-run corpus/crash inputs)");
     }
@@ -137,6 +144,76 @@ public static class Program
         MeatPackDecoder.Unpack(packed);
     }
 
+    /// <summary>
+    /// The writer against arbitrary input: the first byte picks compression, encoding and
+    /// checksum, the rest is G-code text. Writing must never throw, and the reader must walk the
+    /// result to a clean end, verify every block, and give the G-code back as the encoder's
+    /// reconstruction - the same text a second write-and-read yields, which is the fixed point
+    /// the lossy encoding converges on.
+    /// </summary>
+    private static void WriterHarness(ReadOnlySpan<byte> data)
+    {
+        if (data.Length == 0)
+        {
+            return;
+        }
+
+        BgcodeCompression compression = (BgcodeCompression)(data[0] & 0x03);
+        BgcodeGCodeEncoding encoding = (BgcodeGCodeEncoding)((data[0] >> 2) % 3);
+        BgcodeChecksumType checksum = (data[0] & 0x10) == 0 ? BgcodeChecksumType.Crc32 : BgcodeChecksumType.None;
+        string gcode = Encoding.UTF8.GetString(data[1..]);
+
+        string first = WriteAndReadBack(gcode, compression, encoding, checksum);
+        string second = WriteAndReadBack(first, compression, encoding, checksum);
+
+        if (second != first)
+        {
+            throw new InvalidOperationException("a second write-and-read did not reproduce the first: the encoding is not converging");
+        }
+    }
+
+    private static string WriteAndReadBack(string gcode, BgcodeCompression compression, BgcodeGCodeEncoding encoding, BgcodeChecksumType checksum)
+    {
+        using MemoryStream stream = new();
+
+        using (BgcodeWriter writer = new(stream, checksum, leaveOpen: true))
+        {
+            writer.WritePrinterMetadata("printer_model=FUZZ\n", compression);
+            writer.WritePrintMetadata("estimated printing time (normal mode)=0s\n", compression);
+            writer.WriteSlicerMetadata("layer_height=0.2\n", BgcodeMetadataEncoding.Ini, compression);
+            writer.WriteGCode(gcode, encoding, compression);
+        }
+
+        stream.Position = 0;
+
+        BgcodeReader reader = BgcodeReader.Open(stream, new BgcodeReaderOptions { VerifyChecksum = true })
+                              ?? throw new InvalidOperationException("the reader refused a file the writer produced");
+        StringBuilder text = new();
+
+        while (reader.NextBlock() is { } block)
+        {
+            byte[] payload = reader.ReadData(block)
+                             ?? throw new InvalidOperationException($"the reader refused a {block.Type} block the writer produced");
+
+            if (payload.Length != block.UncompressedSize)
+            {
+                throw new InvalidOperationException("a written payload came back at other than its declared size");
+            }
+
+            if (block.Type == BgcodeBlockType.GCode)
+            {
+                text.Append(reader.ReadText(block) ?? throw new InvalidOperationException("the reader refused the G-code text the writer produced"));
+            }
+        }
+
+        if (!reader.AtEnd)
+        {
+            throw new InvalidOperationException("the reader found the writer's file malformed");
+        }
+
+        return text.ToString();
+    }
+
     private static int Replay(string harness, string path)
     {
         byte[] data = File.ReadAllBytes(path);
@@ -153,6 +230,11 @@ public static class Program
 
                 return 0;
 
+            case "writer":
+                WriterHarness(data);
+
+                return 0;
+
             default:
                 PrintUsage();
 
@@ -164,9 +246,17 @@ public static class Program
     {
         string readerDirectory = Path.Combine(root, "reader");
         string meatpackDirectory = Path.Combine(root, "meatpack");
+        string writerDirectory = Path.Combine(root, "writer");
 
         Directory.CreateDirectory(readerDirectory);
         Directory.CreateDirectory(meatpackDirectory);
+        Directory.CreateDirectory(writerDirectory);
+
+        // One option byte, then G-code: the slicers' defaults, and the plain-text corner.
+        File.WriteAllBytes(Path.Combine(writerDirectory, "meatpack-heatshrink.txt"),
+                           [0x0B, .. "; seed\nM73 P0 R0\nG28\nG1 X10 Y20 E0.5\nM104 S210\n"u8]);
+        File.WriteAllBytes(Path.Combine(writerDirectory, "plain-uncompressed.txt"),
+                           [0x10, .. "G1 X1\nG1 X2\n"u8]);
 
         // A real sliced file, when the build carried one along.
         string fixture = Path.Combine(AppContext.BaseDirectory, "metadata-coreone-hf04-pla.bgcode");

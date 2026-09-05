@@ -4,14 +4,18 @@
     <PackageId>libbgcode.NET</PackageId>
     <MinVerTagPrefix>v</MinVerTagPrefix>
     <Authors>Henrik O. Sørensen</Authors>
-    <Description>A .NET reader for Prusa's binary G-code (bgcode) container format: file header, block enumeration, per-block decompression (deflate, heatshrink), MeatPack G-code decoding and CRC-32 verification. Implemented from the published format specification; hardened against untrusted input.</Description>
+    <Description>A .NET reader and writer for Prusa's binary G-code (bgcode) container format: file header, block enumeration, per-block compression (deflate, heatshrink), MeatPack G-code encoding and decoding, CRC-32 checksums, and the JSON metadata PrusaSlicer 3 writes. Implemented from the published format specification; the reader is hardened against untrusted input, the writer cannot produce a file the reference implementation refuses.</Description>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/henrikottesorensen/libbgcode.NET</PackageProjectUrl>
     <RepositoryUrl>https://github.com/henrikottesorensen/libbgcode.NET</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>bgcode;binary-gcode;gcode;prusa;3d-printing;meatpack;heatshrink</PackageTags>
+    <PackageTags>bgcode;binary-gcode;gcode;prusa;prusaslicer;3d-printing;meatpack;heatshrink</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="libbgcode.NET.UnitTest" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="/" />
