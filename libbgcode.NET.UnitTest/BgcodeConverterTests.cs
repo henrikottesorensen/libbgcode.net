@@ -40,13 +40,14 @@ public class BgcodeConverterTests
         blocks.Last().Type.Should().Be(BgcodeBlockType.GCode);
 
         texts[BgcodeBlockType.FileMetadata].Should().Be("Producer=PrusaSlicer 2.9.6\nProduced on=2026-08-19 at 15:00:46 UTC\n");
-        texts[BgcodeBlockType.PrinterMetadata].Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line[..line.IndexOf('=')])
-            .Should().Equal(AsciiMetadataKeys.Printer, "every printer key is present, in block order");
-        texts[BgcodeBlockType.PrinterMetadata].Should().StartWith("printer_model=COREONE\n");
-        texts[BgcodeBlockType.PrintMetadata].Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line[..line.IndexOf('=')])
-            .Should().Equal(AsciiMetadataKeys.Print);
+
+        // The strongest claim available: the blocks our converter builds from the ASCII form are
+        // byte for byte the blocks PrusaSlicer itself wrote into the binary form of the same file.
+        Dictionary<BgcodeBlockType, string> slicers = SlicersOwnBlocks();
+
+        texts[BgcodeBlockType.PrinterMetadata].Should().Be(slicers[BgcodeBlockType.PrinterMetadata], "the printer block should be exactly what PrusaSlicer wrote");
+        texts[BgcodeBlockType.PrintMetadata].Should().Be(slicers[BgcodeBlockType.PrintMetadata], "the print block should be exactly what PrusaSlicer wrote");
+        texts[BgcodeBlockType.SlicerMetadata].Should().Be(slicers[BgcodeBlockType.SlicerMetadata], "the slicer block should be exactly what PrusaSlicer wrote");
         texts[BgcodeBlockType.SlicerMetadata].Should().StartWith("arc_fitting=emit_center\n");
         texts[BgcodeBlockType.SlicerMetadata].Should().Contain("\nz_offset=0\n");
 
@@ -293,6 +294,17 @@ public class BgcodeConverterTests
         string gcode = string.Concat(blocks.Where(block => block.Type == BgcodeBlockType.GCode).Select(block => reader.ReadText(block)));
 
         return (texts, gcode);
+    }
+
+    /// <summary>The metadata blocks PrusaSlicer itself wrote into the binary fixture.</summary>
+    private static Dictionary<BgcodeBlockType, string> SlicersOwnBlocks()
+    {
+        using FileStream file = new(FixturePath("metadata-coreone-hf04-pla.bgcode"), FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        BgcodeReader reader = BgcodeReader.Open(file)!;
+
+        return ReadAll(reader).Where(block => block.Type is not (BgcodeBlockType.GCode or BgcodeBlockType.Thumbnail))
+                              .ToDictionary(block => block.Type, block => reader.ReadText(block)!);
     }
 
     private static List<string> MetadataOf(byte[] binary)

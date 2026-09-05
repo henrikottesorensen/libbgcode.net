@@ -20,14 +20,20 @@ namespace libbgcode.NET;
 /// head apart from the config section.
 /// </para>
 /// <para>
-/// PrusaSlicer writes the printer block's keys as the head comments of its ASCII output, which
-/// is what firmware reads from a plain <c>.gcode</c> file's first kilobytes, so this order is
-/// also what the head of a converted-back file shows.
+/// <b>The order is PrusaSlicer's, not the reference converter's.</b> Readers parse these blocks
+/// by key, so order only matters for fidelity - and the producer of nearly every file anyone
+/// will read is PrusaSlicer, which writes the printer block in one fixed order, identical across
+/// 409 files from three releases (2.9.4 to 2.9.6). The reference converter orders four things
+/// differently (<c>max_layer_z</c> before <c>extruder_colour</c>, <c>objects_info</c> last, the
+/// <c>filament used</c> group, the wipe-tower line); its choice is only observable through
+/// pybgcode and is not what printers see. The print block's order is the same in both.
+/// PrusaSlicer also writes the printer keys as the head comments of its ASCII output, which is
+/// what firmware reads from a plain <c>.gcode</c> file's first kilobytes.
 /// </para>
 /// </remarks>
 internal static class AsciiMetadataKeys
 {
-    /// <summary>The printer metadata keys, in block order.</summary>
+    /// <summary>The printer metadata keys, in the order PrusaSlicer writes the block.</summary>
     public static readonly string[] Printer =
     [
         "printer_model",
@@ -42,16 +48,16 @@ internal static class AsciiMetadataKeys
         "temperature",
         "ironing",
         "support_material",
-        "max_layer_z",
         "extruder_colour",
+        "max_layer_z",
+        "objects_info",
         "filament used [mm]",
-        "filament used [cm3]",
         "filament used [g]",
         "filament cost",
+        "filament used [cm3]",
+        "total filament used for wipe tower [g]",
         "estimated printing time (normal mode)",
         "estimated printing time (silent mode)",
-        "total filament used for wipe tower [g]",
-        "objects_info",
     ];
 
     /// <summary>The print metadata keys, in block order.</summary>
