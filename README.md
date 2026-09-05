@@ -109,6 +109,9 @@ code; both directions are cross-checked against pybgcode.
 
 Two small apps wrap them: `bin2gcode <in.bgcode> [out.gcode]` and
 `gcode2bin <in.gcode> [out.bgcode] [--drop-comments] [--plain] [--no-compression] [--no-checksum]`.
+Both take `--stdin` and `--stdout` for pipes (stdin implies stdout unless an output name is
+given; diagnostics go to stderr), so `bin2gcode --stdin < a.bgcode | gcode2bin --stdin > b.bgcode`
+is a round trip.
 
 ## What this is not
 
